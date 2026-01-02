@@ -27,12 +27,18 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-((n-qz)=dt7uack^4sbl7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+# ALLOWED_HOSTS = [host.strip() for host in config(
+#     'ALLOWED_HOSTS',
+#     default='localhost,127.0.0.1'
+# ).split(',')]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -77,14 +83,25 @@ WSGI_APPLICATION = 'facturacion_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config('DB_NAME', default='whatsapp_facturacion'),
+#         'USER': config('DB_USER', default='postgres'),
+#         'PASSWORD': config('DB_PASSWORD', default=''),
+#         'HOST': config('DB_HOST', default='localhost'),
+#         'PORT': config('DB_PORT', default='5432'),
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='whatsapp_facturacion'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'whatsapp_facturacion',
+        'USER': 'root',
+        'PASSWORD': 'root',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
 }
 
@@ -161,3 +178,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # print("TWILIO_ACCOUNT_SID:", TWILIO_ACCOUNT_SID)
 # print("TWILIO_AUTH_TOKEN:", TWILIO_AUTH_TOKEN)
 # print("TWILIO_WHATSAPP_NUMBER:", TWILIO_WHATSAPP_NUMBER)
+
+JAZZMIN_SETTINGS = {
+    # Títulos y branding
+    "site_title": "WhatsApp Facturación",
+    "site_header": "WhatsApp Facturación",
+    "site_brand": "Panel Admin",
+    "welcome_sign": "Bienvenido al panel de administración",
+
+    # Buscador global
+    "search_model": [
+        "auth.User",
+        "whatsapp_service.MensajesWhatsApp",
+    ],
+
+    # Menú superior
+    "topmenu_links": [
+        {"name": "Inicio", "url": "admin:index"},
+    ],
+
+    # Sidebar
+    "show_sidebar": True,
+    "navigation_expanded": True,
+
+    # Tema
+    "theme": "darkly",
+}

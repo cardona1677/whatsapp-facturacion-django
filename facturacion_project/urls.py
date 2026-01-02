@@ -18,8 +18,11 @@ Including another URLconf
 
 from django.urls import path
 from whatsapp_service import views
+from django.contrib import admin
 
 urlpatterns = [
+    path('admin/', admin.site.urls),
+
     # NUEVO: Endpoint para recibir por URL (GET)
     path('', views.enviar_factura_url, name='enviar_factura_url'),  # Para whatsapp.oficinapro-mail.com
     

@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
@@ -11,7 +12,7 @@ from urllib.parse import unquote
 # ============================================
 # MODO SIMULACIÓN - Para pruebas
 # ============================================
-MODO_SIMULACION = False  # Cambiar a False para usar Twilio real
+MODO_SIMULACION = True  # Cambiar a False para usar Twilio real
 # ============================================
 
 
@@ -443,4 +444,104 @@ def historial_mensajes(request):
         'success': True,
         'total': len(data),
         'mensajes': data
+    })
+
+def dashboard(request):
+    return render(request, 'whatsapp_service/dashboard.html')
+
+@require_http_methods(["GET"])
+def dashboard_stats(request):
+    """Stats para el dashboard - datos reales de la BD"""
+    from django.db.models import Count, Sum, Q
+    from django.utils import timezone
+    from datetime import timedelta
+    import json
+
+    # Rango de tiempo
+    rango = request.GET.get('range', '30d')
+    dias = 7 if rango == '7d' else 90 if rango == '90d' else 30
+    fecha_inicio = timezone.now() - timedelta(days=dias)
+    fecha_inicio_anterior = fecha_inicio - timedelta(days=dias)
+
+    qs = MensajeWhatsApp.objects.filter(fecha_creacion__gte=fecha_inicio)
+    qs_anterior = MensajeWhatsApp.objects.filter(
+        fecha_creacion__gte=fecha_inicio_anterior,
+        fecha_creacion__lt=fecha_inicio
+    )
+
+    # KPIs periodo actual
+    total = qs.count()
+    entregados = qs.filter(estado='delivered').count()
+    fallidos = qs.filter(estado='failed').count()
+    costo = qs.aggregate(total=Sum('precio'))['total'] or 0
+
+    # KPIs periodo anterior (para tendencias)
+    total_ant = qs_anterior.count()
+    entregados_ant = qs_anterior.filter(estado='delivered').count()
+    fallidos_ant = qs_anterior.filter(estado='failed').count()
+
+    tasa = round((entregados / total * 100), 1) if total > 0 else 0
+    tasa_ant = round((entregados_ant / total_ant * 100), 1) if total_ant > 0 else 0
+
+    def tendencia(actual, anterior):
+        if anterior == 0:
+            return 0
+        return round(((actual - anterior) / anterior) * 100, 1)
+
+    # Distribución por estado
+    estados = list(
+        MensajeWhatsApp.objects.filter(fecha_creacion__gte=fecha_inicio)
+        .values('estado')
+        .annotate(total=Count('id'))
+    )
+
+    # Envíos por día (últimos N días)
+    from django.db.models.functions import TruncDate
+    por_dia_raw = (
+        qs.annotate(dia=TruncDate('fecha_creacion'))
+        .values('dia', 'estado')
+        .annotate(total=Count('id'))
+        .order_by('dia')
+    )
+
+    # Agrupar por día
+    dias_map = {}
+    for row in por_dia_raw:
+        key = row['dia'].strftime('%d/%m')
+        if key not in dias_map:
+            dias_map[key] = {'dia': key, 'delivered': 0, 'sent': 0, 'failed': 0, 'otros': 0}
+        estado_r = row['estado']
+        if estado_r in ('delivered', 'sent', 'failed'):
+            dias_map[key][estado_r] += row['total']
+        else:
+            dias_map[key]['otros'] += row['total']
+
+    por_dia = list(dias_map.values())
+
+    # Mensajes recientes
+    recientes = []
+    for msg in MensajeWhatsApp.objects.order_by('-fecha_creacion')[:20]:
+        recientes.append({
+            'inv': msg.numero_factura,
+            'client': msg.nombre_cliente,
+            'phone': msg.telefono,
+            'estado': msg.estado,
+            'modo': msg.modo,
+            'date': msg.fecha_creacion.strftime('%d/%m %H:%M'),
+            'cost': f'${float(msg.precio):.4f}' if msg.precio else '---',
+        })
+
+    return JsonResponse({
+        'kpis': {
+            'total': total,
+            'tasa_entrega': tasa,
+            'costo': float(costo),
+            'fallidos': fallidos,
+            'tendencia_total': tendencia(total, total_ant),
+            'tendencia_tasa': tendencia(tasa, tasa_ant),
+            'tendencia_fallidos': tendencia(fallidos, fallidos_ant),
+        },
+        'estados': estados,
+        'por_dia': por_dia,
+        'recientes': recientes,
     })

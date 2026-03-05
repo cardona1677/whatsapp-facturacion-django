@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Facturacion - Panel de Control</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f; --surface: #111318; --surface2: #181c23;
+    --border: #1f242e; --border2: #2a3140;
+    --accent: #00d4aa; --accent2: #00a87f;
+    --warn: #f59e0b; --danger: #ef4444;
+    --text: #e8eaf0; --text2: #8892a4; --text3: #4a5568;
+    --sent: #3b82f6;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:13px; min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; opacity:0.4; }
+  .layout { display:flex; min-height:100vh; }
+  .sidebar { width:240px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; position:sticky; top:0; height:100vh; }
+  .sidebar-logo { padding:28px 24px; border-bottom:1px solid var(--border); }
+  .logo-badge { display:inline-flex; align-items:center; gap:10px; }
+  .logo-icon { width:32px; height:32px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .logo-icon svg { width:18px; height:18px; }
+  .logo-text { font-family:'Syne',sans-serif; font-weight:800; font-size:15px; letter-spacing:-0.3px; color:var(--text); }
+  .logo-sub { font-size:10px; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+  .sidebar-nav { padding:16px 12px; flex:1; }
+  .nav-section { margin-bottom:24px; }
+  .nav-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); padding:0 12px; margin-bottom:8px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; color:var(--text2); cursor:pointer; transition:all 0.15s; text-decoration:none; border:1px solid transparent; }
+  .nav-item:hover { background:var(--surface2); color:var(--text); }
+  .nav-item.active { background:rgba(0,212,170,0.08); color:var(--accent); border-color:rgba(0,212,170,0.15); }
+  .nav-item svg { width:15px; height:15px; flex-shrink:0; }
+  .sidebar-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  .status-dot { width:8px; height:8px; background:var(--accent); border-radius:50%; box-shadow:0 0 8px var(--accent); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .status-text { color:var(--text2); font-size:11px; }
+  .main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .topbar-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--text); }
+  .topbar-sub { color:var(--text3); font-size:11px; margin-top:2px; }
+  .topbar-actions { display:flex; gap:12px; align-items:center; }
+  .btn { display:inline-flex; align-items:center; gap:7px; padding:8px 16px; border-radius:6px; font-family:'IBM Plex Mono',monospace; font-size:12px; cursor:pointer; border:1px solid transparent; transition:all 0.15s; }
+  .btn-ghost { background:transparent; border-color:var(--border2); color:var(--text2); }
+  .btn-ghost:hover { background:var(--surface2); color:var(--text); }
+  .btn-primary { background:var(--accent); color:#0a0c0f; font-weight:600; }
+  .btn-primary:hover { background:var(--accent2); }
+  .time-filter { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .time-btn { padding:7px 12px; cursor:pointer; color:var(--text2); font-size:11px; transition:all 0.15s; border:none; background:transparent; font-family:'IBM Plex Mono',monospace; }
+  .time-btn:hover { color:var(--text); }
+  .time-btn.active { background:var(--accent); color:#0a0c0f; font-weight:600; }
+  .content { flex:1; padding:28px 32px; overflow-y:auto; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+  .kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; position:relative; overflow:hidden; transition:border-color 0.2s; animation:fadeUp 0.4s ease both; }
+  .kpi-card:hover { border-color:var(--border2); }
+  .kpi-card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .kpi-card.green::after { background:var(--accent); }
+  .kpi-card.blue::after { background:var(--sent); }
+  .kpi-card.yellow::after { background:var(--warn); }
+  .kpi-card.red::after { background:var(--danger); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  .kpi-card:nth-child(1){animation-delay:0.05s} .kpi-card:nth-child(2){animation-delay:0.1s} .kpi-card:nth-child(3){animation-delay:0.15s} .kpi-card:nth-child(4){animation-delay:0.2s}
+  .kpi-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .kpi-label { color:var(--text2); font-size:11px; letter-spacing:0.5px; }
+  .kpi-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .kpi-icon.green { background:rgba(0,212,170,0.1); color:var(--accent); }
+  .kpi-icon.blue { background:rgba(59,130,246,0.1); color:var(--sent); }
+  .kpi-icon.yellow { background:rgba(245,158,11,0.1); color:var(--warn); }
+  .kpi-icon.red { background:rgba(239,68,68,0.1); color:var(--danger); }
+  .kpi-icon svg { width:16px; height:16px; }
+  .kpi-value { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--text); line-height:1; margin-bottom:8px; }
+  .kpi-trend { font-size:11px; display:flex; align-items:center; gap:4px; }
+  .kpi-trend.up { color:var(--accent); } .kpi-trend.down { color:var(--danger); }
+  .skeleton { background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size:200% 100%; animation: shimmer 1.5s infinite; border-radius:4px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .dashboard-grid { display:grid; grid-template-columns:1fr 340px; gap:16px; margin-bottom:28px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .card-header { padding:18px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .card-title { font-family:'Syne',sans-serif; font-weight:700; font-size:14px; }
+  .chart-wrap { padding:20px; height:200px; display:flex; align-items:flex-end; gap:6px; }
+  .bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+  .bar-stack { width:100%; display:flex; flex-direction:column; gap:2px; align-items:center; }
+  .bar { width:100%; border-radius:3px 3px 0 0; transition:opacity 0.2s; min-height:3px; }
+  .bar:hover { opacity:0.8; }
+  .bar.delivered { background:var(--accent); } .bar.sent { background:var(--sent); } .bar.failed { background:var(--danger); } .bar.otros { background:var(--text3); }
+  .bar-label { font-size:9px; color:var(--text3); text-align:center; }
+  .donut-wrap { display:flex; flex-direction:column; align-items:center; gap:20px; padding:20px; }
+  .donut-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .donut-pct { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--text); }
+  .donut-pct-label { font-size:10px; color:var(--text3); }
+  .donut-legend { width:100%; display:flex; flex-direction:column; gap:10px; }
+  .legend-item { display:flex; align-items:center; justify-content:space-between; }
+  .legend-left { display:flex; align-items:center; gap:8px; }
+  .legend-dot { width:8px; height:8px; border-radius:50%; }
+  .legend-name { color:var(--text2); font-size:12px; }
+  .legend-val { font-weight:600; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  thead tr { border-bottom:1px solid var(--border); }
+  th { padding:12px 16px; text-align:left; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); font-weight:500; white-space:nowrap; }
+  td { padding:13px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--surface2); }
+  .status-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:500; }
+  .status-badge .dot { width:6px; height:6px; border-radius:50%; }
+  .badge-delivered { background:rgba(0,212,170,0.1); color:var(--accent); } .badge-delivered .dot { background:var(--accent); }
+  .badge-sent { background:rgba(59,130,246,0.1); color:var(--sent); } .badge-sent .dot { background:var(--sent); }
+  .badge-failed { background:rgba(239,68,68,0.1); color:var(--danger); } .badge-failed .dot { background:var(--danger); }
+  .badge-queued { background:rgba(245,158,11,0.1); color:var(--warn); } .badge-queued .dot { background:var(--warn); }
+  .badge-read { background:rgba(168,85,247,0.1); color:#a855f7; } .badge-read .dot { background:#a855f7; }
+  .badge-undelivered { background:rgba(239,68,68,0.05); color:#f87171; } .badge-undelivered .dot { background:#f87171; }
+  .badge-sending { background:rgba(59,130,246,0.05); color:#60a5fa; } .badge-sending .dot { background:#60a5fa; }
+  .phone-text { color:var(--text2); font-size:12px; }
+  .invoice-text { color:var(--accent); font-weight:500; }
+  .date-text { color:var(--text3); font-size:11px; }
+  .search-bar { display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:7px 12px; }
+  .search-bar svg { color:var(--text3); width:13px; height:13px; flex-shrink:0; }
+  .search-bar input { background:none; border:none; outline:none; color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:12px; width:200px; }
+  .search-bar input::placeholder { color:var(--text3); }
+  ::-webkit-scrollbar { width:6px; height:6px; } ::-webkit-scrollbar-track { background:var(--bg); } ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+  .empty-state { padding:40px; text-align:center; color:var(--text3); font-size:12px; }
+  .error-banner { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171; padding:12px 16px; font-size:12px; margin:16px; border-radius:6px; display:none; }
+  @media (max-width:1200px) { .kpi-grid{grid-template-columns:repeat(2,1fr)} .dashboard-grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-badge">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="color:#0a0c0f">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
+          </svg>
+        </div>
+        <div>
+          <div class="logo-text">WA Billing</div>
+          <div class="logo-sub">API Dashboard</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-label">Principal</div>
+        <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</a>
+        <a class="nav-item" href="/api/whatsapp/historial/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mensajes</a>
+        <a class="nav-item" href="/api/whatsapp/health/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Health Check</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Sistema</div>
+        <a class="nav-item" href="/api/whatsapp/historial/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Historial</a>
+        <a class="nav-item" href="/admin/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M3 12h1m17 0h1M12 3v1m0 17v1m-7.07-15.07.7.7m11.34 11.34.7.7M4.93 19.07l.7-.7m11.34-11.34.7-.7"/></svg>Admin</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="status-dot" id="api-status-dot"></div>
+      <div class="status-text" id="api-status-text">Conectando...</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Panel de Control</div>
+        <div class="topbar-sub" id="current-date">Cargando...</div>
+      </div>
+      <div class="topbar-actions">
+        <div class="time-filter">
+          <button class="time-btn" onclick="setFilter(this,'7d')">7D</button>
+          <button class="time-btn active" onclick="setFilter(this,'30d')">30D</button>
+          <button class="time-btn" onclick="setFilter(this,'90d')">90D</button>
+        </div>
+        <button class="btn btn-primary" id="refresh-btn" onclick="loadData()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Actualizar
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="error-banner" class="error-banner">
+        Error al conectar con la API. Verifica que el servidor Django este corriendo.
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card green">
+          <div class="kpi-header"><span class="kpi-label">MENSAJES ENVIADOS</span><div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
+          <div class="kpi-value" id="kpi-total"><span class="skeleton" style="width:80px;height:36px;display:block"></span></div>
+          <div class="kpi-trend up" id="kpi-total-trend">&nbsp;</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-header"><span class="kpi-label">TASA DE ENTREGA</span><div class="kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div></div>
+          <div class="kpi-value" id="kpi-rate"><span class="skeleton" style="width:80px;height:36px;display:block"></span></div>
+          <div class="kpi-trend up" id="kpi-rate-trend">&nbsp;</div>
+        </div>
+        <div class="kpi-card yellow">
+          <div class="kpi-header"><span class="kpi-label">COSTO TOTAL (USD)</span><div class="kpi-icon yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>
+          <div class="kpi-value" id="kpi-cost"><span class="skeleton" style="width:80px;height:36px;display:block"></span></div>
+          <div class="kpi-trend" id="kpi-cost-trend">&nbsp;</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-header"><span class="kpi-label">MENSAJES FALLIDOS</span><div class="kpi-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div></div>
+          <div class="kpi-value" id="kpi-failed"><span class="skeleton" style="width:80px;height:36px;display:block"></span></div>
+          <div class="kpi-trend" id="kpi-failed-trend">&nbsp;</div>
+        </div>
+      </div>
+
+      <!-- Chart + Donut -->
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Envios por dia</span>
+            <div style="display:flex;gap:12px;align-items:center">
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><span style="width:8px;height:8px;border-radius:2px;background:var(--accent);display:inline-block"></span>Entregado</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><span style="width:8px;height:8px;border-radius:2px;background:var(--sent);display:inline-block"></span>Enviado</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><span style="width:8px;height:8px;border-radius:2px;background:var(--danger);display:inline-block"></span>Fallido</span>
+            </div>
+          </div>
+          <div class="chart-wrap" id="bar-chart">
+            <div class="empty-state" style="width:100%">Cargando datos...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Estado de mensajes</span></div>
+          <div class="donut-wrap">
+            <div style="position:relative;width:140px;height:140px">
+              <svg id="donut-svg" width="140" height="140" viewBox="0 0 140 140">
+                <circle cx="70" cy="70" r="55" fill="none" stroke="#1f242e" stroke-width="18"/>
+                <circle id="donut-delivered" cx="70" cy="70" r="55" fill="none" stroke="#00d4aa" stroke-width="18" stroke-dasharray="0 346" stroke-dashoffset="0" transform="rotate(-90 70 70)" style="transition:stroke-dasharray 0.8s ease"/>
+                <circle id="donut-sent" cx="70" cy="70" r="55" fill="none" stroke="#3b82f6" stroke-width="18" stroke-dasharray="0 346" stroke-dashoffset="0" transform="rotate(-90 70 70)" style="transition:all 0.8s ease"/>
+                <circle id="donut-failed" cx="70" cy="70" r="55" fill="none" stroke="#ef4444" stroke-width="18" stroke-dasharray="0 346" stroke-dashoffset="0" transform="rotate(-90 70 70)" style="transition:all 0.8s ease"/>
+              </svg>
+              <div class="donut-center"><div class="donut-pct" id="donut-pct">--%</div><div class="donut-pct-label">entrega</div></div>
+            </div>
+            <div class="donut-legend" id="donut-legend">
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:var(--accent)"></div><span class="legend-name">Entregado</span></div><span class="legend-val" style="color:var(--accent)" id="leg-delivered">--</span></div>
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:var(--sent)"></div><span class="legend-name">Enviado</span></div><span class="legend-val" style="color:var(--sent)" id="leg-sent">--</span></div>
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:#a855f7"></div><span class="legend-name">Leido</span></div><span class="legend-val" style="color:#a855f7" id="leg-read">--</span></div>
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:var(--danger)"></div><span class="legend-name">Fallido</span></div><span class="legend-val" style="color:var(--danger)" id="leg-failed">--</span></div>
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:var(--warn)"></div><span class="legend-name">En cola</span></div><span class="legend-val" style="color:var(--warn)" id="leg-queued">--</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de mensajes recientes -->
+      <div class="card" style="margin-bottom:28px">
+        <div class="card-header">
+          <span class="card-title">Mensajes Recientes</span>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div class="search-bar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="search-input" placeholder="Buscar factura, cliente..." oninput="filterTable(this.value)">
+            </div>
+            <a href="/api/whatsapp/historial/" class="btn btn-ghost" style="font-size:11px">Ver todos</a>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>FACTURA</th><th>CLIENTE</th><th>TELEFONO</th><th>ESTADO</th><th>MODO</th><th>FECHA</th><th>COSTO</th></tr></thead>
+            <tbody id="table-body">
+              <tr><td colspan="7" class="empty-state">Cargando mensajes...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% verbatim %}
+<script>
+(function() {
+
+  var currentRange = '30d';
+  var allMessages = [];
+
+  // Fecha
+  var now = new Date();
+  var dateEl = document.getElementById('current-date');
+  if (dateEl) {
+    dateEl.textContent = now.toLocaleDateString('es-CO', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  // Filtro de tiempo
+  window.setFilter = function(btn, range) {
+    var btns = document.querySelectorAll('.time-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+    btn.classList.add('active');
+    currentRange = range;
+    loadData();
+  };
+
+  // Tendencia helper
+  function trendHtml(val, invertido) {
+    if (val === 0) return '<span style="color:var(--text3)">sin cambios</span>';
+    var positivo = invertido ? val < 0 : val > 0;
+    var color = positivo ? 'var(--accent)' : 'var(--danger)';
+    var arrow = val > 0 ? '&#8593;' : '&#8595;';
+    return '<span style="color:' + color + '">' + arrow + ' ' + Math.abs(val) + '% vs periodo anterior</span>';
+  }
+
+  // Badges por estado
+  var estadoBadge = {
+    delivered:   '<span class="status-badge badge-delivered"><span class="dot"></span>Entregado</span>',
+    sent:        '<span class="status-badge badge-sent"><span class="dot"></span>Enviado</span>',
+    failed:      '<span class="status-badge badge-failed"><span class="dot"></span>Fallido</span>',
+    queued:      '<span class="status-badge badge-queued"><span class="dot"></span>En cola</span>',
+    read:        '<span class="status-badge badge-read"><span class="dot"></span>Leido</span>',
+    undelivered: '<span class="status-badge badge-undelivered"><span class="dot"></span>No entregado</span>',
+    sending:     '<span class="status-badge badge-sending"><span class="dot"></span>Enviando</span>'
+  };
+
+  // Render tabla
+  function renderTable(data) {
+    var tbody = document.getElementById('table-body');
+    if (!tbody) return;
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay mensajes en este periodo</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+      var m = data[i];
+      var modoColor = (m.modo === 'TEST' || m.modo === 'SIMULACION') ? 'var(--warn)' : 'var(--text2)';
+      var badge = estadoBadge[m.estado] ? estadoBadge[m.estado] : '<span class="status-badge"><span class="dot" style="background:var(--text3)"></span>' + m.estado + '</span>';
+      html = html +
+        '<tr>' +
+          '<td class="invoice-text">' + (m.inv || '---') + '</td>' +
+          '<td>' + (m.client || '---') + '</td>' +
+          '<td class="phone-text">' + (m.phone || '---') + '</td>' +
+          '<td>' + badge + '</td>' +
+          '<td><span style="color:' + modoColor + ';font-size:11px">' + (m.modo || '---') + '</span></td>' +
+          '<td class="date-text">' + (m.date || '---') + '</td>' +
+          '<td style="color:var(--text2)">' + (m.cost || '---') + '</td>' +
+        '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  // Filtro de busqueda en tabla
+  window.filterTable = function(q) {
+    if (!q) { renderTable(allMessages); return; }
+    var ql = q.toLowerCase();
+    var filtered = [];
+    for (var i = 0; i < allMessages.length; i++) {
+      var m = allMessages[i];
+      if ((m.inv && m.inv.toLowerCase().indexOf(ql) !== -1) ||
+          (m.client && m.client.toLowerCase().indexOf(ql) !== -1) ||
+          (m.phone && m.phone.indexOf(q) !== -1)) {
+        filtered.push(m);
+      }
+    }
+    renderTable(filtered);
+  };
+
+  // Render grafico de barras
+  function renderChart(porDia) {
+    var chartEl = document.getElementById('bar-chart');
+    if (!chartEl) return;
+    if (!porDia || porDia.length === 0) {
+      chartEl.innerHTML = '<div class="empty-state" style="width:100%">Sin datos para este periodo</div>';
+      return;
+    }
+
+    var maxVal = 0;
+    for (var i = 0; i < porDia.length; i++) {
+      var tot = (porDia[i].delivered || 0) + (porDia[i].sent || 0) + (porDia[i].failed || 0) + (porDia[i].otros || 0);
+      if (tot > maxVal) maxVal = tot;
+    }
+    if (maxVal === 0) maxVal = 1;
+
+    var h = 160;
+    var html = '';
+    for (var i = 0; i < porDia.length; i++) {
+      var d = porDia[i];
+      var delH  = Math.round(((d.delivered || 0) / maxVal) * h);
+      var sentH = Math.round(((d.sent || 0) / maxVal) * h);
+      var failH = Math.round(((d.failed || 0) / maxVal) * h);
+      html = html +
+        '<div class="bar-group">' +
+          '<div class="bar-stack">' +
+            (failH > 0 ? '<div class="bar failed" style="height:' + failH + 'px" title="' + (d.failed||0) + ' fallidos"></div>' : '') +
+            (sentH > 0 ? '<div class="bar sent" style="height:' + sentH + 'px" title="' + (d.sent||0) + ' enviados"></div>' : '') +
+            (delH > 0 ? '<div class="bar delivered" style="height:' + delH + 'px" title="' + (d.delivered||0) + ' entregados"></div>' : '') +
+            (delH === 0 && sentH === 0 && failH === 0 ? '<div class="bar otros" style="height:3px"></div>' : '') +
+          '</div>' +
+          '<span class="bar-label">' + (d.dia || '') + '</span>' +
+        '</div>';
+    }
+    chartEl.innerHTML = html;
+  }
+
+  // Render donut
+  function renderDonut(estados, tasa) {
+    var circum = 346;
+    var counts = {delivered:0, sent:0, failed:0, read:0, queued:0};
+    var total = 0;
+    for (var i = 0; i < estados.length; i++) {
+      var e = estados[i];
+      counts[e.estado] = (counts[e.estado] || 0) + e.total;
+      total += e.total;
+    }
+    if (total === 0) total = 1;
+
+    var delArc  = Math.round((counts.delivered / total) * circum);
+    var sentArc = Math.round((counts.sent / total) * circum);
+    var failArc = Math.round((counts.failed / total) * circum);
+
+    var dEl = document.getElementById('donut-delivered');
+    var sEl = document.getElementById('donut-sent');
+    var fEl = document.getElementById('donut-failed');
+    if (dEl) { dEl.setAttribute('stroke-dasharray', delArc + ' ' + circum); dEl.setAttribute('stroke-dashoffset', '0'); }
+    if (sEl) { sEl.setAttribute('stroke-dasharray', sentArc + ' ' + circum); sEl.setAttribute('stroke-dashoffset', '-' + delArc); }
+    if (fEl) { fEl.setAttribute('stroke-dasharray', failArc + ' ' + circum); fEl.setAttribute('stroke-dashoffset', '-' + (delArc + sentArc)); }
+
+    var pctEl = document.getElementById('donut-pct');
+    if (pctEl) pctEl.textContent = tasa + '%';
+
+    var legDel = document.getElementById('leg-delivered');
+    var legSent = document.getElementById('leg-sent');
+    var legRead = document.getElementById('leg-read');
+    var legFail = document.getElementById('leg-failed');
+    var legQ = document.getElementById('leg-queued');
+    if (legDel) legDel.textContent = (counts.delivered || 0).toLocaleString();
+    if (legSent) legSent.textContent = (counts.sent || 0).toLocaleString();
+    if (legRead) legRead.textContent = (counts.read || 0).toLocaleString();
+    if (legFail) legFail.textContent = (counts.failed || 0).toLocaleString();
+    if (legQ) legQ.textContent = (counts.queued || 0).toLocaleString();
+  }
+
+  // Carga principal de datos
+  window.loadData = function() {
+    var btn = document.getElementById('refresh-btn');
+    if (btn) btn.style.opacity = '0.6';
+
+    var url = '/api/whatsapp/stats/?range=' + currentRange;
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState !== 4) return;
+      if (btn) btn.style.opacity = '1';
+
+      if (xhr.status !== 200) {
+        showError(true);
+        setApiStatus(false);
+        return;
+      }
+
+      showError(false);
+      setApiStatus(true);
+
+      var data;
+      try { data = JSON.parse(xhr.responseText); } catch(e) { showError(true); return; }
+
+      // KPIs
+      var kpis = data.kpis || {};
+      var totalEl = document.getElementById('kpi-total');
+      var rateEl  = document.getElementById('kpi-rate');
+      var costEl  = document.getElementById('kpi-cost');
+      var failEl  = document.getElementById('kpi-failed');
+      if (totalEl) totalEl.textContent = (kpis.total || 0).toLocaleString();
+      if (rateEl)  rateEl.textContent  = (kpis.tasa_entrega || 0) + '%';
+      if (costEl)  costEl.textContent  = '$' + parseFloat(kpis.costo || 0).toFixed(2);
+      if (failEl)  failEl.textContent  = (kpis.fallidos || 0).toLocaleString();
+
+      var tt = document.getElementById('kpi-total-trend');
+      var rt = document.getElementById('kpi-rate-trend');
+      var ft = document.getElementById('kpi-failed-trend');
+      if (tt) tt.innerHTML = trendHtml(kpis.tendencia_total || 0, false);
+      if (rt) rt.innerHTML = trendHtml(kpis.tendencia_tasa || 0, false);
+      if (ft) ft.innerHTML = trendHtml(kpis.tendencia_fallidos || 0, true);
+
+      // Grafico
+      renderChart(data.por_dia || []);
+
+      // Donut
+      renderDonut(data.estados || [], kpis.tasa_entrega || 0);
+
+      // Tabla
+      allMessages = data.recientes || [];
+      var searchInput = document.getElementById('search-input');
+      var q = searchInput ? searchInput.value : '';
+      if (q) { window.filterTable(q); } else { renderTable(allMessages); }
+    };
+    xhr.send();
+  };
+
+  function showError(show) {
+    var banner = document.getElementById('error-banner');
+    if (banner) banner.style.display = show ? 'block' : 'none';
+  }
+
+  function setApiStatus(ok) {
+    var dot  = document.getElementById('api-status-dot');
+    var text = document.getElementById('api-status-text');
+    if (dot)  dot.style.background  = ok ? 'var(--accent)' : 'var(--danger)';
+    if (dot)  dot.style.boxShadow   = ok ? '0 0 8px var(--accent)' : '0 0 8px var(--danger)';
+    if (text) text.textContent = ok ? 'API activa - BD conectada' : 'Error de conexion';
+  }
+
+  // Carga inicial
+  loadData();
+
+  // Auto-refresh cada 60 segundos
+  setInterval(function() { loadData(); }, 60000);
+
+})();
+</script>
+{% endverbatim %}
+</body>
+</html>

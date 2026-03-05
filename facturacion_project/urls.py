@@ -22,7 +22,8 @@ from django.contrib import admin
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
+    path('dashboard/', views.dashboard, name='dashboard'),
+    
     # NUEVO: Endpoint para recibir por URL (GET)
     path('', views.enviar_factura_url, name='enviar_factura_url'),  # Para whatsapp.oficinapro-mail.com
     
@@ -32,4 +33,5 @@ urlpatterns = [
     # Otros endpoints
     path('api/whatsapp/health/', views.health_check, name='health_check'),
     path('api/whatsapp/historial/', views.historial_mensajes, name='historial_mensajes'),
+    path('api/whatsapp/stats/', views.dashboard_stats, name='dashboard_stats'),
 ]

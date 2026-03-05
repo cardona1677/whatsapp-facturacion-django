@@ -83,6 +83,7 @@ WSGI_APPLICATION = 'facturacion_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+#POSTGRESQL
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -94,6 +95,7 @@ WSGI_APPLICATION = 'facturacion_project.wsgi.application'
 #     }
 # }
 
+#MYSQL
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
